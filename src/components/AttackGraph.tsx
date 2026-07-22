@@ -1,8 +1,5 @@
-import React, { useCallback } from 'react';
 import ReactFlow, { 
   Background, 
-  Controls, 
-  MiniMap,
   useNodesState,
   useEdgesState,
   MarkerType
@@ -74,8 +71,8 @@ const initialEdges = [
 ];
 
 export default function AttackGraph() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
   return (
     <div style={{ width: '100%', height: '100%' }}>

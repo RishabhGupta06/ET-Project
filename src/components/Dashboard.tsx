@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { Shield, Activity, AlertTriangle, Terminal, Network, Search, Bell } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useEffect, useRef } from 'react';
+import { Shield, Activity, AlertTriangle, Terminal, Network, Search, Bell, Sun, Moon, Cpu, Settings, CheckCircle } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import AttackGraph from './AttackGraph';
 
+// Mock Data
 const anomalyData = [
-  { time: '10:00', score: 0.1 },
-  { time: '10:05', score: 0.15 },
-  { time: '10:10', score: 0.12 },
-  { time: '10:15', score: 0.89 },
-  { time: '10:20', score: 0.95 },
-  { time: '10:25', score: 0.4 },
-  { time: '10:30', score: 0.2 },
+  { time: '10:00', score: 0.1 }, { time: '10:05', score: 0.15 }, { time: '10:10', score: 0.12 },
+  { time: '10:15', score: 0.89 }, { time: '10:20', score: 0.95 }, { time: '10:25', score: 0.4 }, { time: '10:30', score: 0.2 },
+];
+
+const cpuData = [
+  { time: '00s', usage: 30 }, { time: '10s', usage: 35 }, { time: '20s', usage: 45 },
+  { time: '30s', usage: 90 }, { time: '40s', usage: 60 }, { time: '50s', usage: 40 }, { time: '60s', usage: 45 },
 ];
 
 const alerts = [
@@ -19,131 +20,331 @@ const alerts = [
   { id: 3, severity: 'medium', type: 'High CPU Usage', target: 'Web-Server-03', time: '10:12:05', mitre: 'T1496' },
 ];
 
+const initialVulnerabilities = [
+  { id: 'CVE-2024-2100', name: 'RCE in Web Server', status: 'critical', patched: false },
+  { id: 'CVE-2023-3450', name: 'SQL Injection', status: 'high', patched: true },
+  { id: 'CVE-2023-1100', name: 'XSS in Admin Panel', status: 'medium', patched: false },
+];
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // Theme Toggle Effect
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  // AI Copilot State
+  const [messages, setMessages] = useState([
+    { role: 'ai', text: 'I detected anomalous lateral movement (T1021) originating from Admin-PC towards DB-Prod-01. The behavioral score is 0.89.' },
+    { role: 'user', text: 'What is the recommended SOAR action?' },
+    { role: 'ai', text: 'Based on the playbook, I recommend: 1. Isolate Admin-PC 2. Revoke active sessions for Admin user.', isAction: true }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Scanner State
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+    const userMsg = { role: 'user', text: inputValue };
+    setMessages(prev => [...prev, userMsg]);
+    setInputValue('');
+    
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        role: 'ai', 
+        text: `Analyzing query: "${userMsg.text}". No direct threats found related to this query. Systems are nominal.` 
+      }]);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const runScan = () => {
+    setIsScanning(true);
+    setScanProgress(0);
+    const interval = setInterval(() => {
+      setScanProgress(p => {
+        if (p >= 100) {
+          clearInterval(interval);
+          setIsScanning(false);
+          return 100;
+        }
+        return p + 10;
+      });
+    }, 200);
+  };
+
+  // Reusable Classes
+  const panelClass = "bg-white dark:bg-[#0a0a0f] border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm transition-colors";
+  const textPrimary = "text-gray-900 dark:text-gray-50";
+  const textSecondary = "text-gray-500 dark:text-gray-400";
+  const textMuted = "text-gray-400 dark:text-gray-600";
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-gray-200 p-4 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#020617] text-gray-900 dark:text-gray-50 p-4 font-sans transition-colors duration-300">
       {/* Header */}
-      <header className="flex justify-between items-center mb-6 glass-panel p-4 rounded-2xl">
+      <header className={`${panelClass} flex justify-between items-center mb-6 p-4`}>
         <div className="flex items-center gap-3">
-          <div className="bg-primary/20 p-2 rounded-lg text-primary">
+          <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
             <Shield size={28} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-wide">AI Cyber Resilience</h1>
-            <p className="text-xs text-gray-400">CNI Protection Platform</p>
+            <h1 className={`text-xl font-bold tracking-tight ${textPrimary}`}>AI Cyber Resilience</h1>
+            <p className={`text-xs ${textSecondary}`}>CNI Protection Platform</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMuted}`} size={16} />
             <input 
               type="text" 
-              placeholder="Search assets, alerts, CVEs..." 
-              className="bg-black/50 border border-gray-800 rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:border-primary w-64 transition-all"
+              placeholder="Search assets, CVEs..." 
+              className={`bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:border-blue-500 w-64 transition-colors ${textPrimary}`}
             />
           </div>
-          <button className="relative p-2 hover:bg-white/5 rounded-full transition-colors">
-            <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${textSecondary}`}
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent"></div>
+          <button className={`relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${textSecondary}`}>
+            <Bell size={20} />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-[#0a0a0f]"></span>
+          </button>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-sm border border-white dark:border-[#0a0a0f]"></div>
         </div>
       </header>
 
       <div className="grid grid-cols-12 gap-6 h-[calc(100vh-120px)]">
         {/* Sidebar */}
-        <div className="col-span-2 glass-panel rounded-2xl p-4 flex flex-col gap-2">
-          <button onClick={() => setActiveTab('overview')} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-gray-400'}`}>
-            <Activity size={20} /> <span className="font-medium">Overview</span>
-          </button>
-          <button onClick={() => setActiveTab('graph')} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'graph' ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-gray-400'}`}>
-            <Network size={20} /> <span className="font-medium">Attack Graph</span>
-          </button>
-          <button onClick={() => setActiveTab('alerts')} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'alerts' ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-gray-400'}`}>
-            <AlertTriangle size={20} /> <span className="font-medium">Threat Intel</span>
-          </button>
-          <button onClick={() => setActiveTab('copilot')} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'copilot' ? 'bg-primary/20 text-primary' : 'hover:bg-white/5 text-gray-400'}`}>
-            <Terminal size={20} /> <span className="font-medium">AI Copilot</span>
-          </button>
+        <div className={`col-span-2 ${panelClass} p-4 flex flex-col gap-2`}>
+          <div className={`text-xs font-semibold uppercase tracking-wider mb-2 mt-2 px-3 ${textMuted}`}>Modules</div>
+          {[
+            { id: 'overview', icon: <Activity size={18} />, label: 'Overview' },
+            { id: 'graph', icon: <Network size={18} />, label: 'Attack Graph' },
+            { id: 'health', icon: <Cpu size={18} />, label: 'System Health' },
+            { id: 'vulnerabilities', icon: <AlertTriangle size={18} />, label: 'Vulnerabilities' },
+            { id: 'settings', icon: <Settings size={18} />, label: 'Settings' }
+          ].map(item => (
+            <button 
+              key={item.id}
+              onClick={() => setActiveTab(item.id)} 
+              className={`flex items-center gap-3 p-3 rounded-lg transition-all text-sm font-medium ${
+                activeTab === item.id 
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                  : `hover:bg-gray-50 dark:hover:bg-gray-800/50 ${textSecondary}`
+              }`}
+            >
+              {item.icon} <span>{item.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Main Content */}
         <div className="col-span-10 grid grid-cols-12 gap-6">
           
-          {/* Main Graph Area */}
+          {/* Main Visualizer Area */}
           <div className="col-span-8 flex flex-col gap-6">
+            
             {/* Top Stats */}
             <div className="grid grid-cols-3 gap-6 h-28">
-              <div className="glass-panel rounded-2xl p-4 flex flex-col justify-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-danger/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <h3 className="text-gray-400 text-sm font-medium mb-1">Active Threats</h3>
-                <div className="text-3xl font-bold text-white">3</div>
-                <div className="text-xs text-danger mt-2 flex items-center gap-1"><AlertTriangle size={12}/> Critical severity</div>
+              <div className={`${panelClass} p-5 flex flex-col justify-center`}>
+                <h3 className={`text-sm font-medium mb-1 ${textSecondary}`}>Active Threats</h3>
+                <div className={`text-3xl font-bold ${textPrimary}`}>3</div>
+                <div className="text-xs text-red-500 mt-1 font-medium">Critical severity</div>
               </div>
-              <div className="glass-panel rounded-2xl p-4 flex flex-col justify-center">
-                <h3 className="text-gray-400 text-sm font-medium mb-1">Monitored Assets</h3>
-                <div className="text-3xl font-bold text-white">1,204</div>
-                <div className="text-xs text-success mt-2">100% online</div>
+              <div className={`${panelClass} p-5 flex flex-col justify-center`}>
+                <h3 className={`text-sm font-medium mb-1 ${textSecondary}`}>Monitored Assets</h3>
+                <div className={`text-3xl font-bold ${textPrimary}`}>1,204</div>
+                <div className="text-xs text-emerald-500 mt-1 font-medium">100% online</div>
               </div>
-              <div className="glass-panel rounded-2xl p-4 flex flex-col justify-center">
-                <h3 className="text-gray-400 text-sm font-medium mb-1">Anomaly Score</h3>
-                <div className="text-3xl font-bold text-warning">89%</div>
-                <div className="text-xs text-warning mt-2">Elevated risk detected</div>
+              <div className={`${panelClass} p-5 flex flex-col justify-center`}>
+                <h3 className={`text-sm font-medium mb-1 ${textSecondary}`}>Global Risk Score</h3>
+                <div className={`text-3xl font-bold text-amber-500`}>89%</div>
+                <div className="text-xs text-amber-500 mt-1 font-medium">Elevated risk detected</div>
               </div>
             </div>
 
-            {/* Visualizer Area */}
-            <div className="glass-panel rounded-2xl flex-1 p-4 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-white">
-                  {activeTab === 'overview' ? 'Behavioral Anomaly Score' : 'Attack Path Prediction'}
-                </h2>
-                <div className="flex gap-2">
-                  <span className="px-3 py-1 rounded-full bg-danger/20 text-danger text-xs font-semibold border border-danger/30">Action Required</span>
-                </div>
-              </div>
+            {/* Dynamic Content Panel */}
+            <div className={`${panelClass} flex-1 flex flex-col overflow-hidden`}>
               
-              <div className="flex-1 relative bg-black/30 rounded-xl overflow-hidden border border-gray-800">
-                {activeTab === 'overview' ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={anomalyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="time" stroke="#666" tick={{fill: '#666'}} axisLine={false} />
-                      <YAxis stroke="#666" tick={{fill: '#666'}} axisLine={false} tickLine={false} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#13131a', border: '1px solid #333', borderRadius: '8px' }}
-                        itemStyle={{ color: '#0ea5e9' }}
-                      />
-                      <Line type="monotone" dataKey="score" stroke="#0ea5e9" strokeWidth={3} dot={{r: 4, fill: '#0ea5e9', strokeWidth: 2, stroke: '#0a0a0f'}} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <AttackGraph />
-                )}
-              </div>
+              {activeTab === 'overview' && (
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className={`text-lg font-semibold ${textPrimary}`}>Behavioral Anomaly Score</h2>
+                  </div>
+                  <div className="flex-1 w-full bg-gray-50/50 dark:bg-[#050508] rounded-lg border border-gray-100 dark:border-gray-800/50 pt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={anomalyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#1f2937' : '#e2e8f0'} vertical={false} />
+                        <XAxis dataKey="time" stroke={isDarkMode ? '#6b7280' : '#94a3b8'} axisLine={false} tickLine={false} />
+                        <YAxis stroke={isDarkMode ? '#6b7280' : '#94a3b8'} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: isDarkMode ? '#1f2937' : '#ffffff', border: isDarkMode ? 'none' : '1px solid #e2e8f0', borderRadius: '8px', color: isDarkMode ? '#f8fafc' : '#0f172a' }}
+                        />
+                        <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6', strokeWidth: 2}} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'graph' && (
+                <div className="flex-1 flex flex-col">
+                  <div className="p-5 pb-0 flex justify-between items-center">
+                    <h2 className={`text-lg font-semibold ${textPrimary}`}>Attack Path Prediction</h2>
+                  </div>
+                  <div className="flex-1 m-5 bg-gray-50/50 dark:bg-[#050508] rounded-lg border border-gray-100 dark:border-gray-800/50">
+                    <AttackGraph isDark={isDarkMode} />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'health' && (
+                <div className="p-5 flex-1 flex flex-col">
+                  <h2 className={`text-lg font-semibold mb-4 ${textPrimary}`}>System Health Monitor</h2>
+                  <div className="flex-1 w-full bg-gray-50/50 dark:bg-[#050508] rounded-lg border border-gray-100 dark:border-gray-800/50 pt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={cpuData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorUsage" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#1f2937' : '#e2e8f0'} vertical={false} />
+                        <XAxis dataKey="time" stroke={isDarkMode ? '#6b7280' : '#94a3b8'} axisLine={false} tickLine={false} />
+                        <YAxis stroke={isDarkMode ? '#6b7280' : '#94a3b8'} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: isDarkMode ? '#1f2937' : '#ffffff', border: isDarkMode ? 'none' : '1px solid #e2e8f0', borderRadius: '8px' }} />
+                        <Area type="monotone" dataKey="usage" stroke="#10b981" fillOpacity={1} fill="url(#colorUsage)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'vulnerabilities' && (
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className={`text-lg font-semibold ${textPrimary}`}>Vulnerability Scanner</h2>
+                    <button 
+                      onClick={runScan}
+                      disabled={isScanning}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Search size={16} /> {isScanning ? 'Scanning...' : 'Run Scan'}
+                    </button>
+                  </div>
+                  
+                  {isScanning && (
+                    <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2.5 mb-6 overflow-hidden">
+                      <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-200" style={{ width: `${scanProgress}%` }}></div>
+                    </div>
+                  )}
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className={`text-xs uppercase ${textSecondary} bg-gray-50 dark:bg-gray-900/50`}>
+                        <tr>
+                          <th className="px-4 py-3 rounded-tl-lg">CVE ID</th>
+                          <th className="px-4 py-3">Vulnerability</th>
+                          <th className="px-4 py-3">Severity</th>
+                          <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {initialVulnerabilities.map((vuln) => (
+                          <tr key={vuln.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                            <td className={`px-4 py-4 font-medium ${textPrimary}`}>{vuln.id}</td>
+                            <td className={`px-4 py-4 ${textSecondary}`}>{vuln.name}</td>
+                            <td className="px-4 py-4">
+                              <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                                vuln.status === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                vuln.status === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {vuln.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              {vuln.patched ? 
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><CheckCircle size={14}/> Patched</span> : 
+                                <span className="flex items-center gap-1 text-red-600 dark:text-red-400"><AlertTriangle size={14}/> Open</span>
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'settings' && (
+                <div className="p-5 flex-1 flex flex-col">
+                  <h2 className={`text-lg font-semibold mb-6 ${textPrimary}`}>System Settings</h2>
+                  <div className="space-y-6 max-w-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={`font-medium ${textPrimary}`}>Dark Mode</div>
+                        <div className={`text-sm ${textSecondary}`}>Toggle the platform theme</div>
+                      </div>
+                      <button 
+                        onClick={() => setIsDarkMode(!isDarkMode)}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+                      >
+                        <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}></span>
+                      </button>
+                    </div>
+                    <hr className="border-gray-200 dark:border-gray-800" />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={`font-medium ${textPrimary}`}>Email Notifications</div>
+                        <div className={`text-sm ${textSecondary}`}>Receive alerts for critical threats</div>
+                      </div>
+                      <button className="w-12 h-6 rounded-full bg-blue-600 transition-colors relative">
+                        <span className="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform translate-x-6"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
 
-          {/* Right Sidebar - Alerts & Copilot */}
+          {/* Right Sidebar - Intel & Copilot */}
           <div className="col-span-4 flex flex-col gap-6">
-            {/* Recent Alerts */}
-            <div className="glass-panel rounded-2xl p-4 flex-1 flex flex-col max-h-[50%]">
-              <h2 className="text-lg font-semibold text-white mb-4">Real-time Intel</h2>
+            
+            {/* Threat Intel */}
+            <div className={`${panelClass} p-5 flex flex-col h-[40%]`}>
+              <h2 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${textMuted}`}>Threat Intel</h2>
               <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
                 {alerts.map(alert => (
-                  <div key={alert.id} className="bg-black/40 border border-gray-800 rounded-xl p-3 hover:border-gray-600 transition-colors cursor-pointer">
+                  <div key={alert.id} className="bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-lg p-3 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${alert.severity === 'critical' ? 'bg-danger' : alert.severity === 'high' ? 'bg-warning' : 'bg-primary'}`}></span>
-                        <span className="font-semibold text-sm text-gray-200">{alert.type}</span>
+                        <span className={`w-2 h-2 rounded-full ${alert.severity === 'critical' ? 'bg-red-500' : alert.severity === 'high' ? 'bg-amber-500' : 'bg-blue-500'}`}></span>
+                        <span className={`font-medium text-sm ${textPrimary}`}>{alert.type}</span>
                       </div>
-                      <span className="text-xs text-gray-500">{alert.time}</span>
+                      <span className={`text-xs ${textMuted}`}>{alert.time}</span>
                     </div>
-                    <div className="flex justify-between items-end mt-3">
-                      <div className="text-xs text-gray-400">Target: <span className="text-gray-300">{alert.target}</span></div>
-                      <span className="px-2 py-1 bg-white/5 text-accent text-[10px] font-mono rounded-md border border-accent/20">
+                    <div className="flex justify-between items-end mt-2">
+                      <div className={`text-xs ${textSecondary}`}>Target: <span className="font-medium">{alert.target}</span></div>
+                      <span className="px-2 py-0.5 bg-white dark:bg-[#0a0a0f] text-gray-600 dark:text-gray-400 text-[10px] font-mono rounded border border-gray-200 dark:border-gray-800">
                         {alert.mitre}
                       </span>
                     </div>
@@ -153,40 +354,50 @@ export default function Dashboard() {
             </div>
 
             {/* AI Security Copilot */}
-            <div className="glass-panel rounded-2xl p-4 flex-1 flex flex-col">
+            <div className={`${panelClass} p-5 flex-1 flex flex-col`}>
               <div className="flex items-center gap-2 mb-4">
-                <Terminal className="text-primary" size={20} />
-                <h2 className="text-lg font-semibold text-white">AI Copilot</h2>
+                <Terminal className="text-blue-600 dark:text-blue-400" size={18} />
+                <h2 className={`text-sm font-semibold uppercase tracking-wider ${textMuted}`}>AI Copilot</h2>
               </div>
-              <div className="flex-1 bg-black/40 border border-gray-800 rounded-xl p-4 mb-3 flex flex-col gap-4 overflow-y-auto">
-                <div className="bg-primary/10 border border-primary/20 rounded-lg rounded-tl-none p-3 max-w-[85%] self-start">
-                  <p className="text-sm text-gray-300">I detected anomalous lateral movement (T1021) originating from <span className="text-primary">Admin-PC</span> towards <span className="text-danger">DB-Prod-01</span>. The behavioral score is 0.89.</p>
-                </div>
-                <div className="bg-white/10 rounded-lg rounded-tr-none p-3 max-w-[85%] self-end">
-                  <p className="text-sm text-gray-200">What is the recommended SOAR action?</p>
-                </div>
-                <div className="bg-primary/10 border border-primary/20 rounded-lg rounded-tl-none p-3 max-w-[85%] self-start">
-                  <p className="text-sm text-gray-300 mb-2">Based on the playbook, I recommend:</p>
-                  <ul className="text-xs text-gray-400 list-disc pl-4 space-y-1">
-                    <li>Isolate Admin-PC from the network</li>
-                    <li>Revoke active sessions for Admin user</li>
-                  </ul>
-                  <button className="mt-3 px-4 py-1.5 bg-danger/20 hover:bg-danger/30 text-danger text-xs font-semibold rounded-lg border border-danger/30 transition-colors w-full">
-                    Execute SOAR Playbook
-                  </button>
-                </div>
+              
+              <div className="flex-1 bg-gray-50/50 dark:bg-[#050508] border border-gray-100 dark:border-gray-800/50 rounded-lg p-4 mb-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`p-3 text-sm rounded-2xl max-w-[90%] ${
+                      msg.role === 'user' 
+                        ? 'bg-blue-600 text-white rounded-tr-sm' 
+                        : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-tl-sm text-gray-800 dark:text-gray-200 shadow-sm'
+                    }`}>
+                      {msg.text}
+                    </div>
+                    {msg.isAction && (
+                      <button className="mt-2 ml-1 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg border border-red-200 dark:border-red-900/50 transition-colors">
+                        Execute SOAR Playbook
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
               </div>
-              <div className="relative">
+
+              <div className="relative mt-auto">
                 <input 
                   type="text" 
-                  placeholder="Ask Copilot about threats..." 
-                  className="w-full bg-black/50 border border-gray-800 rounded-xl py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-primary transition-colors"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask Copilot..." 
+                  className={`w-full bg-gray-50 dark:bg-[#050508] border border-gray-200 dark:border-gray-800 rounded-lg py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-blue-500 transition-colors ${textPrimary}`}
                 />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:text-white transition-colors p-1">
+                <button 
+                  onClick={handleSendMessage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors p-1"
+                >
                   <Terminal size={16} />
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       </div>
